@@ -30,7 +30,7 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc
 
 from PIL import Image
 import cv2
-import datetime
+import time
 
 
 tf.app.flags.DEFINE_string('server', 'localhost:9000',
@@ -53,11 +53,37 @@ def main(_):
     #request.model_spec.signature_name = 'predict_images'
   request.inputs['inputs'].CopyFrom(
       tf.contrib.util.make_tensor_proto(data, shape=[1,480,800,3]))
-  starttime = datetime.datetime.now()
+  starttime = time.time()
   result = stub.Predict(request, 10.0)  # 10 secs timeout
-  endtime = datetime.datetime.now()
-  print((endtime-starttime).seconds)
-  print(result)
+  endtime = time.time()
+  print("detecting time is {}".format(endtime-starttime))
+  #get the prediction result
+  model_detection_boxes = result.outputs['detection_boxes'].float_val
+  model_detection_classes = result.outputs['detection_classes'].float_val
+  model_detection_scores = result.outputs['detection_scores'].float_val
+  #count the number of detection score is greater 0.9
+  count = 0
+  for score in model_detection_scores:
+    if score < 0.9:
+      break
+    count = count+1
+  #get each box information
+  response_info = []
+  class_info = {"1":"touched","2":"untouched"}
+  for i in range(count):
+    box_info = {}
+    box_info["class"] = class_info[str(int(model_detection_classes[i]))]
+    x = model_detection_boxes[i*4]*480
+    y = model_detection_boxes[i*4+1]*800
+    height = (model_detection_boxes[i*4+2] - model_detection_boxes[i*4])*480
+    width = (model_detection_boxes[i*4+3] - model_detection_boxes[i*4+1])*800
+    x_y_h_w = [x,y,height,width]
+    box_info["location_info"] = x_y_h_w
+    response_info.append(box_info)
+  print("detect {} button in the image".format(count))
+  print(response_info)
+  
+        
 
 
 if __name__ == '__main__':
