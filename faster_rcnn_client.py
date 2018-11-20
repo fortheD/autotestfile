@@ -15,7 +15,7 @@
 
 #!/usr/bin/env python2.7
 
-"""Send JPEG image to tensorflow_model_server loaded with inception model.
+"""Send PNG image to tensorflow_model_server loaded with inception model.
 """
 
 from __future__ import print_function
@@ -28,29 +28,23 @@ import tensorflow as tf
 from tensorflow_serving.apis import predict_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 
-from PIL import Image
 import cv2
 import time
 
 
 tf.app.flags.DEFINE_string('server', 'localhost:9000',
                            'PredictionService host:port')
-tf.app.flags.DEFINE_string('image', '', 'path to image in JPEG format')
+tf.app.flags.DEFINE_string('image', '', 'path to image in PNG format')
 FLAGS = tf.app.flags.FLAGS
 
 
 def main(_):
   channel = grpc.insecure_channel(FLAGS.server)
   stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-  #img = Image.open(FLAGS.image)
-  # Send request
-  #with open(FLAGS.image, 'rb') as f:
-    # See prediction_service.proto for gRPC request/response details.
   data = cv2.imread(FLAGS.image)
   print(data.shape)
   request = predict_pb2.PredictRequest()
   request.model_spec.name = 'faster_rcnn'
-    #request.model_spec.signature_name = 'predict_images'
   request.inputs['inputs'].CopyFrom(
       tf.contrib.util.make_tensor_proto(data, shape=[1,480,800,3]))
   starttime = time.time()
